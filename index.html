@@ -231,6 +231,7 @@
   .btn-clear { background: var(--pink); }
   .btn-sound { background: var(--teal); margin-left: auto; }
   .btn-save  { background: #22c55e; }
+  .btn-undo  { background: var(--sky); }
 
   /* Stage where the giant letters appear */
   .stage {
@@ -325,12 +326,19 @@
   }
   .draw-bar { flex-wrap: wrap; }   /* Home/Clear/Save wrap rather than overflow */
 
-  .swatches { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  /* 14 colours laid out as two rows of 7 so each stays big */
+  .swatches {
+    display: grid;
+    grid-template-columns: repeat(7, auto);
+    justify-content: start;
+    align-items: center;
+    gap: 8px;
+  }
   .swatch {
     appearance: none;
     padding: 0;
-    width: clamp(46px, 9vw, 60px);
-    height: clamp(46px, 9vw, 60px);
+    width: clamp(42px, 8vw, 58px);
+    height: clamp(42px, 8vw, 58px);
     border-radius: 50%;
     border: 4px solid #fff;
     cursor: pointer;
@@ -338,6 +346,7 @@
     transition: transform .08s ease;
   }
   .swatch:active { transform: translateY(2px); }
+  .swatch.is-white { border-color: #94a3b8; }   /* visible outline on the white canvas */
   .swatch[aria-pressed="true"] {
     outline: 5px solid var(--purple-deep);
     outline-offset: 3px;
@@ -362,6 +371,7 @@
   .size-btn:active { transform: translateY(2px); }
   .size-btn[aria-pressed="true"] { outline: 5px solid var(--purple-deep); outline-offset: 3px; }
   .size-dot { display: block; background: var(--ink); border-radius: 50%; }
+  .eraser-btn { font-size: clamp(22px, 5vw, 28px); }   /* same pill look as size buttons */
 
   .draw-stage {
     position: relative;
@@ -450,12 +460,14 @@
   <section id="drawing" class="view" aria-label="Drawing Pad">
     <div class="typing-bar draw-bar">
       <button class="big-btn btn-home"  type="button" id="draw-home">🏠 Home</button>
+      <button class="big-btn btn-undo"  type="button" id="draw-undo">↩️ Undo</button>
       <button class="big-btn btn-clear" type="button" id="draw-clear">🧹 Clear</button>
       <button class="big-btn btn-save"  type="button" id="draw-save">💾 Save</button>
     </div>
     <div class="tools-bar">
       <div class="swatches" id="swatches" role="group" aria-label="Colors"></div>
       <div class="sizes" id="sizes" role="group" aria-label="Brush size"></div>
+      <button class="size-btn eraser-btn" type="button" id="draw-eraser" aria-pressed="false" aria-label="Eraser">🧽</button>
     </div>
     <div class="draw-stage" id="draw-stage">
       <canvas id="pad" aria-label="Drawing canvas"></canvas>
@@ -677,15 +689,56 @@
   const drawStage = document.getElementById("draw-stage");
 
   const PAINT_COLORS = [
+    // Row 1 — rainbow (her existing colours)
     ["Red", "#ef4444"], ["Orange", "#f97316"], ["Yellow", "#facc15"],
     ["Green", "#22c55e"], ["Blue", "#3b82f6"], ["Purple", "#8b5cf6"],
-    ["Pink", "#ec4899"], ["Black", "#111111"]
+    ["Pink", "#ec4899"],
+    // Row 2 — earth tones + extras
+    ["Black", "#111111"], ["Brown", "#8b5e34"], ["Tan", "#d2b48c"],
+    ["Gray", "#9ca3af"], ["Sky", "#38bdf8"], ["White", "#ffffff"],
+    ["Magenta", "#d946ef"]
   ];
   const BRUSH_SIZES = [["Thin", 8], ["Medium", 20], ["Thick", 40]];
+  const PAPER = "#ffffff";       // paper-white = the eraser colour
 
   let currentColor = "#111111"; // black pen by default
   let currentSize  = 20;        // medium-thick by default
   let padInited    = false;
+  let eraserOn     = false;
+
+  /* ---------- Undo stack (capped to limit tablet memory) ---------- */
+  const undoStack = [];
+  const UNDO_MAX  = 12;
+  function pushUndo() {
+    if (!padInited || !pad.width || !pad.height) return;
+    const snap = document.createElement("canvas");
+    snap.width = pad.width; snap.height = pad.height;
+    snap.getContext("2d").drawImage(pad, 0, 0);
+    undoStack.push(snap);
+    if (undoStack.length > UNDO_MAX) undoStack.shift();   // drop the oldest
+  }
+  function undo() {
+    const snap = undoStack.pop();
+    if (!snap) return;
+    padCtx.setTransform(1, 0, 0, 1, 0, 0);
+    padCtx.clearRect(0, 0, pad.width, pad.height);
+    padCtx.drawImage(snap, 0, 0);
+    const ratio = window.devicePixelRatio || 1;
+    padCtx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  }
+
+  /* ---------- Eraser mode (paints paper-white with the current brush) ---------- */
+  const eraserBtn = document.getElementById("draw-eraser");
+  function setEraser(on) {
+    eraserOn = on;
+    eraserBtn.setAttribute("aria-pressed", String(on));
+    if (on) {
+      // Deselect every colour so the eraser is the obvious active tool.
+      document.querySelectorAll("#swatches .swatch")
+        .forEach(function (s) { s.setAttribute("aria-pressed", "false"); });
+    }
+  }
+  eraserBtn.addEventListener("click", function () { setEraser(true); });
 
   /* ---------- Build colour swatches ---------- */
   (function buildSwatches() {
@@ -695,10 +748,12 @@
       b.type = "button";
       b.className = "swatch";
       b.style.background = c[1];
+      if (c[1].toLowerCase() === "#ffffff") b.classList.add("is-white");
       b.setAttribute("aria-label", c[0]);
-      b.setAttribute("aria-pressed", String(c[1] === currentColor));
+      b.setAttribute("aria-pressed", String(c[1] === currentColor && !eraserOn));
       b.addEventListener("click", function () {
         currentColor = c[1];
+        setEraser(false);   // picking a colour exits eraser mode
         wrap.querySelectorAll(".swatch").forEach(function (s) { s.setAttribute("aria-pressed", "false"); });
         b.setAttribute("aria-pressed", "true");
       });
@@ -752,6 +807,7 @@
     if (snap) padCtx.drawImage(snap, 0, 0, snap.width, snap.height, 0, 0, pad.width, pad.height);
     padCtx.setTransform(ratio, 0, 0, ratio, 0, 0);  // draw in CSS pixels
     padInited = true;
+    undoStack.length = 0;   // snapshots are size-specific; drop history on a real resize
   }
 
   /* ---------- Freehand drawing (pointer events: mouse + touch) ---------- */
@@ -763,12 +819,13 @@
   }
   function strokeDot(p) {
     padCtx.beginPath();
-    padCtx.fillStyle = currentColor;
+    padCtx.fillStyle = eraserOn ? PAPER : currentColor;
     padCtx.arc(p.x, p.y, currentSize / 2, 0, Math.PI * 2);
     padCtx.fill();
   }
   pad.addEventListener("pointerdown", function (e) {
     drawing = true;
+    pushUndo();                 // snapshot before this stroke (covers draw and erase)
     try { pad.setPointerCapture(e.pointerId); } catch (err) {}
     const p = posOf(e);
     pts = [p];
@@ -779,7 +836,7 @@
     if (!drawing) return;
     const p = posOf(e);
     pts.push(p);
-    padCtx.strokeStyle = currentColor;
+    padCtx.strokeStyle = eraserOn ? PAPER : currentColor;
     padCtx.lineWidth = currentSize;
     padCtx.lineCap = "round";
     padCtx.lineJoin = "round";
@@ -813,6 +870,7 @@
 
   /* ---------- Clear / Save ---------- */
   function clearPad() {
+    pushUndo();                 // so Clear can be undone
     padCtx.setTransform(1, 0, 0, 1, 0, 0);
     padCtx.fillStyle = "#ffffff";
     padCtx.fillRect(0, 0, pad.width, pad.height);
@@ -840,6 +898,7 @@
   document.getElementById("draw-home").addEventListener("click", goHome);
   document.getElementById("draw-clear").addEventListener("click", clearPad);
   document.getElementById("draw-save").addEventListener("click", saveDrawing);
+  document.getElementById("draw-undo").addEventListener("click", undo);
 
   // Resize/rotate: only when the drawing view is active (avoids zero-size while hidden).
   window.addEventListener("resize", function () {
