@@ -63,8 +63,9 @@
 
   /* ---------- View switching ---------- */
   .view { display: none; }
-  body[data-view="home"]   #home   { display: block; }
-  body[data-view="typing"] #typing { display: flex; }
+  body[data-view="home"]    #home    { display: block; }
+  body[data-view="typing"]  #typing  { display: flex; }
+  body[data-view="drawing"] #drawing { display: flex; }
 
   /* ============================================================
      HOME VIEW
@@ -158,6 +159,7 @@
   .art-typing { background: linear-gradient(135deg, var(--teal) 0%, var(--sky) 100%); }
   .art-family { background: linear-gradient(135deg, var(--yellow) 0%, var(--pink) 100%); }
   .art-animals{ background: linear-gradient(135deg, #34d399 0%, var(--teal) 100%); }
+  .art-drawing{ background: linear-gradient(135deg, var(--pink) 0%, var(--yellow) 50%, var(--sky) 100%); }
 
   .tile-label {
     padding: 16px 18px;
@@ -228,6 +230,7 @@
   .btn-home  { background: var(--purple); }
   .btn-clear { background: var(--pink); }
   .btn-sound { background: var(--teal); margin-left: auto; }
+  .btn-save  { background: #22c55e; }
 
   /* Stage where the giant letters appear */
   .stage {
@@ -296,6 +299,87 @@
     .letter { animation: none; }
     .tile { transition: none; }
   }
+
+  /* ============================================================
+     DRAWING VIEW
+  ============================================================ */
+  #drawing {
+    position: fixed;
+    inset: 0;
+    flex-direction: column;
+    background: linear-gradient(160deg, #ede9fe 0%, #fce7f3 100%);
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;          /* no page scroll / pinch / pull-to-refresh here */
+  }
+
+  /* Second toolbar row: color swatches + brush sizes */
+  .tools-bar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px clamp(12px, 4vw, 28px);
+    padding: 8px clamp(12px, 3vw, 24px);
+    background: rgba(255,255,255,.45);
+  }
+  .draw-bar { flex-wrap: wrap; }   /* Home/Clear/Save wrap rather than overflow */
+
+  .swatches { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .swatch {
+    appearance: none;
+    padding: 0;
+    width: clamp(46px, 9vw, 60px);
+    height: clamp(46px, 9vw, 60px);
+    border-radius: 50%;
+    border: 4px solid #fff;
+    cursor: pointer;
+    box-shadow: 0 4px 0 rgba(0,0,0,.15);
+    transition: transform .08s ease;
+  }
+  .swatch:active { transform: translateY(2px); }
+  .swatch[aria-pressed="true"] {
+    outline: 5px solid var(--purple-deep);
+    outline-offset: 3px;
+    transform: scale(1.14);
+  }
+
+  .sizes { display: flex; align-items: center; gap: 8px; }
+  .size-btn {
+    appearance: none;
+    border: none;
+    cursor: pointer;
+    background: #fff;
+    border-radius: 999px;
+    min-width: clamp(54px, 11vw, 70px);
+    height: clamp(48px, 9vw, 62px);
+    padding: 0 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 0 rgba(0,0,0,.15);
+  }
+  .size-btn:active { transform: translateY(2px); }
+  .size-btn[aria-pressed="true"] { outline: 5px solid var(--purple-deep); outline-offset: 3px; }
+  .size-dot { display: block; background: var(--ink); border-radius: 50%; }
+
+  .draw-stage {
+    position: relative;
+    flex: 1 1 auto;
+    overflow: hidden;
+    touch-action: none;
+    padding: 10px clamp(10px, 3vw, 20px) clamp(12px, 3vw, 20px);
+  }
+  #pad {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 8px 24px rgba(109,40,217,.20);
+    touch-action: none;
+    cursor: crosshair;
+  }
 </style>
 </head>
 <body data-view="home">
@@ -333,6 +417,11 @@
         <div class="tile-art art-typing"><span class="tile-emoji" aria-hidden="true">⌨️</span></div>
         <div class="tile-label">Typing Box</div>
       </button>
+
+      <button class="tile" type="button" id="open-drawing">
+        <div class="tile-art art-drawing"><span class="tile-emoji" aria-hidden="true">🎨</span></div>
+        <div class="tile-label">Drawing Pad</div>
+      </button>
     </div>
 
     <h2 class="section-title">📸 Photos</h2>
@@ -354,6 +443,22 @@
              spellcheck="false" inputmode="text" aria-label="Type letters here">
       <div class="letters" id="letters" aria-live="polite"></div>
       <div class="hint">Press any key! ✨</div>
+    </div>
+  </section>
+
+  <!-- ================= DRAWING ================= -->
+  <section id="drawing" class="view" aria-label="Drawing Pad">
+    <div class="typing-bar draw-bar">
+      <button class="big-btn btn-home"  type="button" id="draw-home">🏠 Home</button>
+      <button class="big-btn btn-clear" type="button" id="draw-clear">🧹 Clear</button>
+      <button class="big-btn btn-save"  type="button" id="draw-save">💾 Save</button>
+    </div>
+    <div class="tools-bar">
+      <div class="swatches" id="swatches" role="group" aria-label="Colors"></div>
+      <div class="sizes" id="sizes" role="group" aria-label="Brush size"></div>
+    </div>
+    <div class="draw-stage" id="draw-stage">
+      <canvas id="pad" aria-label="Drawing canvas"></canvas>
     </div>
   </section>
 
@@ -560,6 +665,185 @@
     if (e.target === capture || e.target === stageEl || e.target === lettersEl) {
       setTimeout(refocus, 0);
     }
+  });
+
+  /* ============================================================
+     DRAWING PAD
+     The canvas bitmap persists while the view is hidden, so the
+     drawing survives Home -> Drawing round-trips. Only Clear wipes it.
+  ============================================================ */
+  const pad      = document.getElementById("pad");
+  const padCtx   = pad.getContext("2d");
+  const drawStage = document.getElementById("draw-stage");
+
+  const PAINT_COLORS = [
+    ["Red", "#ef4444"], ["Orange", "#f97316"], ["Yellow", "#facc15"],
+    ["Green", "#22c55e"], ["Blue", "#3b82f6"], ["Purple", "#8b5cf6"],
+    ["Pink", "#ec4899"], ["Black", "#111111"]
+  ];
+  const BRUSH_SIZES = [["Thin", 8], ["Medium", 20], ["Thick", 40]];
+
+  let currentColor = "#111111"; // black pen by default
+  let currentSize  = 20;        // medium-thick by default
+  let padInited    = false;
+
+  /* ---------- Build colour swatches ---------- */
+  (function buildSwatches() {
+    const wrap = document.getElementById("swatches");
+    PAINT_COLORS.forEach(function (c) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "swatch";
+      b.style.background = c[1];
+      b.setAttribute("aria-label", c[0]);
+      b.setAttribute("aria-pressed", String(c[1] === currentColor));
+      b.addEventListener("click", function () {
+        currentColor = c[1];
+        wrap.querySelectorAll(".swatch").forEach(function (s) { s.setAttribute("aria-pressed", "false"); });
+        b.setAttribute("aria-pressed", "true");
+      });
+      wrap.appendChild(b);
+    });
+  })();
+
+  /* ---------- Build brush-size buttons ---------- */
+  (function buildSizes() {
+    const wrap = document.getElementById("sizes");
+    BRUSH_SIZES.forEach(function (s) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "size-btn";
+      b.setAttribute("aria-label", s[0] + " brush");
+      b.setAttribute("aria-pressed", String(s[1] === currentSize));
+      const dot = document.createElement("span");
+      dot.className = "size-dot";
+      const d = Math.min(s[1], 34);
+      dot.style.width = d + "px";
+      dot.style.height = d + "px";
+      b.appendChild(dot);
+      b.addEventListener("click", function () {
+        currentSize = s[1];
+        wrap.querySelectorAll(".size-btn").forEach(function (x) { x.setAttribute("aria-pressed", "false"); });
+        b.setAttribute("aria-pressed", "true");
+      });
+      wrap.appendChild(b);
+    });
+  })();
+
+  /* ---------- Canvas sizing (preserves the drawing on resize/rotate) ---------- */
+  function sizeCanvas() {
+    const w = pad.clientWidth, h = pad.clientHeight;
+    if (!w || !h) return;                         // hidden view -> skip
+    const ratio = window.devicePixelRatio || 1;
+    const newW = Math.round(w * ratio), newH = Math.round(h * ratio);
+    if (pad.width === newW && pad.height === newH) return;  // no real change
+
+    let snap = null;
+    if (padInited && pad.width && pad.height) {
+      snap = document.createElement("canvas");
+      snap.width = pad.width; snap.height = pad.height;
+      snap.getContext("2d").drawImage(pad, 0, 0);
+    }
+    pad.width = newW; pad.height = newH;
+    // White paper background, then restore any prior drawing (scaled to new size).
+    padCtx.setTransform(1, 0, 0, 1, 0, 0);
+    padCtx.fillStyle = "#ffffff";
+    padCtx.fillRect(0, 0, pad.width, pad.height);
+    if (snap) padCtx.drawImage(snap, 0, 0, snap.width, snap.height, 0, 0, pad.width, pad.height);
+    padCtx.setTransform(ratio, 0, 0, ratio, 0, 0);  // draw in CSS pixels
+    padInited = true;
+  }
+
+  /* ---------- Freehand drawing (pointer events: mouse + touch) ---------- */
+  let drawing = false;
+  let pts = [];
+  function posOf(e) {
+    const r = pad.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+  function strokeDot(p) {
+    padCtx.beginPath();
+    padCtx.fillStyle = currentColor;
+    padCtx.arc(p.x, p.y, currentSize / 2, 0, Math.PI * 2);
+    padCtx.fill();
+  }
+  pad.addEventListener("pointerdown", function (e) {
+    drawing = true;
+    try { pad.setPointerCapture(e.pointerId); } catch (err) {}
+    const p = posOf(e);
+    pts = [p];
+    strokeDot(p);            // a single tap leaves a dot
+    e.preventDefault();
+  });
+  pad.addEventListener("pointermove", function (e) {
+    if (!drawing) return;
+    const p = posOf(e);
+    pts.push(p);
+    padCtx.strokeStyle = currentColor;
+    padCtx.lineWidth = currentSize;
+    padCtx.lineCap = "round";
+    padCtx.lineJoin = "round";
+    if (pts.length >= 3) {
+      // Smooth: quadratic curve through the midpoints of the last three points.
+      const a = pts[pts.length - 3], b = pts[pts.length - 2], c = pts[pts.length - 1];
+      const m1 = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      const m2 = { x: (b.x + c.x) / 2, y: (b.y + c.y) / 2 };
+      padCtx.beginPath();
+      padCtx.moveTo(m1.x, m1.y);
+      padCtx.quadraticCurveTo(b.x, b.y, m2.x, m2.y);
+      padCtx.stroke();
+    } else {
+      const a = pts[pts.length - 2], b = pts[pts.length - 1];
+      padCtx.beginPath();
+      padCtx.moveTo(a.x, a.y);
+      padCtx.lineTo(b.x, b.y);
+      padCtx.stroke();
+    }
+    e.preventDefault();
+  });
+  function endStroke(e) {
+    if (!drawing) return;
+    drawing = false;
+    pts = [];
+    if (e) e.preventDefault();
+  }
+  pad.addEventListener("pointerup", endStroke);
+  pad.addEventListener("pointercancel", endStroke);
+  pad.addEventListener("pointerleave", endStroke);
+
+  /* ---------- Clear / Save ---------- */
+  function clearPad() {
+    padCtx.setTransform(1, 0, 0, 1, 0, 0);
+    padCtx.fillStyle = "#ffffff";
+    padCtx.fillRect(0, 0, pad.width, pad.height);
+    const ratio = window.devicePixelRatio || 1;
+    padCtx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  }
+  function saveDrawing() {
+    let url;
+    try { url = pad.toDataURL("image/png"); } catch (err) { return; }
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "hayden-drawing.png";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  /* ---------- View wiring ---------- */
+  function goDrawing() {
+    body.dataset.view = "drawing";
+    // Size after layout so clientWidth/Height are correct (and content is preserved).
+    requestAnimationFrame(sizeCanvas);
+  }
+  document.getElementById("open-drawing").addEventListener("click", goDrawing);
+  document.getElementById("draw-home").addEventListener("click", goHome);
+  document.getElementById("draw-clear").addEventListener("click", clearPad);
+  document.getElementById("draw-save").addEventListener("click", saveDrawing);
+
+  // Resize/rotate: only when the drawing view is active (avoids zero-size while hidden).
+  window.addEventListener("resize", function () {
+    if (body.dataset.view === "drawing") sizeCanvas();
   });
 
   /* ---------- PWA: register the service worker ---------- */
