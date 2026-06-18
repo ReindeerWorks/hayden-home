@@ -880,9 +880,15 @@
   function saveDrawing() {
     let url;
     try { url = pad.toDataURL("image/png"); } catch (err) { return; }
+    // Unique local-time filename so saves never overwrite each other.
+    const d = new Date();
+    const p = function (n, w) { return String(n).padStart(w || 2, "0"); };
+    const stamp = d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) +
+      "_" + p(d.getHours()) + "-" + p(d.getMinutes()) + "-" + p(d.getSeconds()) +
+      "-" + p(d.getMilliseconds(), 3);   // ms suffix guarantees uniqueness within a second
     const a = document.createElement("a");
     a.href = url;
-    a.download = "hayden-drawing.png";
+    a.download = "hayden-drawing-" + stamp + ".png";
     document.body.appendChild(a);
     a.click();
     a.remove();
