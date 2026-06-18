@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#8b5cf6">
+<title>Hayden's Home</title>
+<style>
+  /* ============================================================
+     Hayden's Home — a kid-friendly launcher
+     Vanilla HTML/CSS/JS. No frameworks, no build, no deps.
+     Touch-first (big tap targets) AND fully keyboard-usable.
+  ============================================================ */
+
+  :root {
+    --purple:      #8b5cf6;
+    --purple-deep: #6d28d9;
+    --pink:        #f472b6;
+    --teal:        #2dd4bf;
+    --yellow:      #fbbf24;
+    --sky:         #38bdf8;
+    --bg-1:        #f5edff;
+    --bg-2:        #ffeef8;
+    --ink:         #3b2a5a;
+    --tile-radius: 28px;
+    --focus:       #ff7a00;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+  }
+
+  body {
+    font-family: "Comic Sans MS", "Chalkboard SE", "Trebuchet MS", system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background: linear-gradient(160deg, var(--bg-1) 0%, var(--bg-2) 100%);
+    min-height: 100%;
+    -webkit-text-size-adjust: 100%;
+    overscroll-behavior: none;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Big, obvious focus ring everywhere for keyboard users */
+  :focus-visible {
+    outline: 6px solid var(--focus);
+    outline-offset: 4px;
+    border-radius: 10px;
+  }
+
+  /* ---------- View switching ---------- */
+  .view { display: none; }
+  body[data-view="home"]   #home   { display: block; }
+  body[data-view="typing"] #typing { display: flex; }
+
+  /* ============================================================
+     HOME VIEW
+  ============================================================ */
+  #home {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: clamp(16px, 4vw, 40px) clamp(14px, 4vw, 32px) 60px;
+  }
+
+  .home-header {
+    text-align: center;
+    margin: 8px 0 24px;
+  }
+  .home-header h1 {
+    font-size: clamp(34px, 8vw, 64px);
+    margin: 0;
+    color: var(--purple-deep);
+    text-shadow: 2px 3px 0 #fff, 4px 6px 0 rgba(139,92,246,.18);
+    letter-spacing: 1px;
+  }
+  .home-header p {
+    font-size: clamp(18px, 4vw, 26px);
+    margin: 6px 0 0;
+    color: var(--pink);
+  }
+
+  .section-title {
+    font-size: clamp(22px, 5vw, 34px);
+    color: var(--purple-deep);
+    margin: 28px 6px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+    gap: clamp(16px, 3vw, 28px);
+  }
+
+  /* A tile is a link or button. Reset native styles. */
+  .tile {
+    appearance: none;
+    border: none;
+    text-decoration: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border-radius: var(--tile-radius);
+    overflow: hidden;
+    box-shadow: 0 10px 0 rgba(139,92,246,.18), 0 14px 30px rgba(109,40,217,.18);
+    transition: transform .12s ease, box-shadow .12s ease;
+    text-align: left;
+    padding: 0;
+  }
+  .tile:hover,
+  .tile:focus-visible {
+    transform: translateY(-6px);
+    box-shadow: 0 16px 0 rgba(139,92,246,.22), 0 22px 40px rgba(109,40,217,.24);
+  }
+  .tile:active { transform: translateY(0); }
+
+  /* Image area of a tile — uniform shape, screenshots cover it */
+  .tile-art {
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    background: linear-gradient(135deg, var(--purple) 0%, var(--pink) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .tile-art img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;     /* differing screenshot shapes fill uniformly */
+    display: block;
+  }
+  .tile-emoji {
+    font-size: clamp(64px, 16vw, 110px);
+    line-height: 1;
+    filter: drop-shadow(0 6px 6px rgba(0,0,0,.18));
+  }
+
+  /* Distinct gradients for the non-screenshot tiles */
+  .art-typing { background: linear-gradient(135deg, var(--teal) 0%, var(--sky) 100%); }
+  .art-family { background: linear-gradient(135deg, var(--yellow) 0%, var(--pink) 100%); }
+  .art-animals{ background: linear-gradient(135deg, #34d399 0%, var(--teal) 100%); }
+
+  .tile-label {
+    padding: 16px 18px;
+    font-size: clamp(19px, 3.4vw, 25px);
+    font-weight: bold;
+    color: var(--purple-deep);
+    min-height: 64px;
+    display: flex;
+    align-items: center;
+  }
+
+  /* "Coming soon" photo tile — not tappable */
+  .tile.coming-soon {
+    cursor: default;
+    opacity: .85;
+    box-shadow: 0 8px 0 rgba(139,92,246,.10), 0 10px 24px rgba(109,40,217,.10);
+  }
+  .tile.coming-soon:hover { transform: none; }
+  .tile.coming-soon .tile-art { background: linear-gradient(135deg, #c4b5fd 0%, #ddd6fe 100%); }
+  .tile.coming-soon .tile-label { color: #8b7bb5; flex-direction: column; align-items: flex-start; gap: 2px; }
+  .coming-pill {
+    font-size: clamp(14px, 3vw, 18px);
+    font-weight: bold;
+    color: #fff;
+    background: var(--purple);
+    padding: 4px 14px;
+    border-radius: 999px;
+  }
+
+  /* ============================================================
+     TYPING VIEW
+  ============================================================ */
+  #typing {
+    position: fixed;
+    inset: 0;
+    flex-direction: column;
+    background: linear-gradient(160deg, #ede9fe 0%, #fce7f3 100%);
+  }
+
+  .typing-bar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px clamp(12px, 3vw, 24px);
+    background: rgba(255,255,255,.6);
+    backdrop-filter: blur(4px);
+  }
+
+  .big-btn {
+    appearance: none;
+    border: none;
+    font: inherit;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 999px;
+    padding: 16px clamp(18px, 4vw, 30px);
+    font-size: clamp(20px, 4.5vw, 28px);
+    color: #fff;
+    box-shadow: 0 6px 0 rgba(0,0,0,.15);
+    transition: transform .08s ease;
+    min-height: 64px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .big-btn:active { transform: translateY(3px); box-shadow: 0 3px 0 rgba(0,0,0,.15); }
+  .btn-home  { background: var(--purple); }
+  .btn-clear { background: var(--pink); }
+  .btn-sound { background: var(--teal); margin-left: auto; }
+
+  /* Stage where the giant letters appear */
+  .stage {
+    position: relative;
+    flex: 1 1 auto;
+    overflow: hidden;
+    display: flex;
+    align-content: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    padding: 20px;
+  }
+  /* Transparent full-stage input summons the on-screen keyboard on tablets */
+  #capture {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    border: 0;
+    background: transparent;
+    font-size: 16px;          /* >=16px avoids mobile auto-zoom */
+    caret-color: transparent;
+    color: transparent;
+    z-index: 1;
+  }
+  .letters {
+    position: relative;
+    z-index: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-content: center;
+    justify-content: center;
+    gap: 4px 12px;
+    width: 100%;
+    pointer-events: none;
+  }
+  .letter {
+    font-size: clamp(70px, 18vw, 200px);
+    font-weight: bold;
+    line-height: 1;
+    animation: pop-in .35s cubic-bezier(.18,1.4,.4,1);
+  }
+  .letter.space { width: clamp(36px, 9vw, 90px); }
+  @keyframes pop-in {
+    0%   { transform: scale(.1) rotate(-12deg); opacity: 0; }
+    60%  { transform: scale(1.25) rotate(6deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0); opacity: 1; }
+  }
+
+  .hint {
+    position: absolute;
+    bottom: 14px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: clamp(16px, 3.5vw, 22px);
+    color: #9b8bc4;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .stage:not(.empty) .hint { display: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .letter { animation: none; }
+    .tile { transition: none; }
+  }
+</style>
+</head>
+<body data-view="home">
+
+  <!-- ================= HOME ================= -->
+  <main id="home" class="view">
+    <header class="home-header">
+      <h1>Hi Hayden! 💜</h1>
+      <p>Pick something fun to do</p>
+    </header>
+
+    <h2 class="section-title">🎮 Games</h2>
+    <div class="grid">
+      <a class="tile" href="https://reindeerworks.github.io/hayden-math-quest/">
+        <div class="tile-art"><img src="images/math-quest.png" alt="Hayden's K-Pop Math Quest"></div>
+        <div class="tile-label">Hayden's K-Pop Math Quest</div>
+      </a>
+
+      <a class="tile" href="https://reindeerworks.github.io/hayden-memory-match/">
+        <div class="tile-art"><img src="images/memory-match.png" alt="Hayden's Memory Match"></div>
+        <div class="tile-label">Hayden's Memory Match</div>
+      </a>
+
+      <a class="tile" href="https://reindeerworks.github.io/gabbymemory/gabbyandhaydengame.html">
+        <div class="tile-art"><img src="images/gabby-memory.png" alt="Gabby's Memory Game"></div>
+        <div class="tile-label">Gabby's Memory Game</div>
+      </a>
+
+      <a class="tile" href="https://reindeerworks.github.io/spell-the-summon/">
+        <div class="tile-art"><img src="images/spell-the-summon.png" alt="Spell the Summon"></div>
+        <div class="tile-label">Spell the Summon</div>
+      </a>
+
+      <button class="tile" type="button" id="open-typing">
+        <div class="tile-art art-typing"><span class="tile-emoji" aria-hidden="true">⌨️</span></div>
+        <div class="tile-label">Typing Box</div>
+      </button>
+    </div>
+
+    <h2 class="section-title">📸 Photos</h2>
+    <div class="grid" id="photos-grid">
+      <!-- Photo tiles are rendered by JS based on the album URLs below -->
+    </div>
+  </main>
+
+  <!-- ================= TYPING ================= -->
+  <section id="typing" class="view" aria-label="Typing Box">
+    <div class="typing-bar">
+      <button class="big-btn btn-home" type="button" id="typing-home">🏠 Home</button>
+      <button class="big-btn btn-clear" type="button" id="typing-clear">🧹 Clear</button>
+      <button class="big-btn btn-sound" type="button" id="typing-sound" aria-pressed="true">🔊 Sound on</button>
+    </div>
+    <div class="stage empty" id="stage">
+      <input id="capture" type="text"
+             autocomplete="off" autocorrect="off" autocapitalize="characters"
+             spellcheck="false" inputmode="text" aria-label="Type letters here">
+      <div class="letters" id="letters" aria-live="polite"></div>
+      <div class="hint">Press any key! ✨</div>
+    </div>
+  </section>
+
+<script>
+  /* ============================================================
+     CONFIG — set these when the photo albums are ready.
+     Empty string = tile shows "Coming soon" and is NOT tappable.
+     A URL      = tile opens that link in a NEW tab.
+  ============================================================ */
+  const FAMILY_ALBUM_URL  = "";
+  const ANIMALS_ALBUM_URL = "";
+
+  /* ---------- View navigation ---------- */
+  const body = document.body;
+  function goHome()   { body.dataset.view = "home"; stopSpeaking(); }
+  function goTyping() {
+    body.dataset.view = "typing";
+    // Focus the capture input so a tablet's on-screen keyboard appears.
+    setTimeout(function () { capture.focus(); }, 50);
+  }
+
+  /* ---------- Build the two photo tiles ---------- */
+  function makePhotoTile(label, emoji, artClass, url) {
+    if (url) {
+      const a = document.createElement("a");
+      a.className = "tile";
+      a.href = url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.innerHTML =
+        '<div class="tile-art ' + artClass + '"><span class="tile-emoji" aria-hidden="true">' + emoji + '</span></div>' +
+        '<div class="tile-label">' + label + '</div>';
+      return a;
+    }
+    // Coming-soon: a non-interactive div (not focusable, not tappable)
+    const div = document.createElement("div");
+    div.className = "tile coming-soon";
+    div.setAttribute("aria-label", label + " — coming soon");
+    div.innerHTML =
+      '<div class="tile-art ' + artClass + '"><span class="tile-emoji" aria-hidden="true">' + emoji + '</span></div>' +
+      '<div class="tile-label">' + label + '<span class="coming-pill">Coming soon</span></div>';
+    return div;
+  }
+  (function renderPhotos() {
+    const grid = document.getElementById("photos-grid");
+    grid.appendChild(makePhotoTile("Family",  "👨‍👩‍👧", "art-family",  FAMILY_ALBUM_URL));
+    grid.appendChild(makePhotoTile("Animals", "🐶",     "art-animals", ANIMALS_ALBUM_URL));
+  })();
+
+  document.getElementById("open-typing").addEventListener("click", goTyping);
+  document.getElementById("typing-home").addEventListener("click", goHome);
+
+  /* ============================================================
+     TYPING BOX
+  ============================================================ */
+  const capture   = document.getElementById("capture");
+  const lettersEl = document.getElementById("letters");
+  const stageEl   = document.getElementById("stage");
+  const soundBtn  = document.getElementById("typing-sound");
+
+  const COLORS = ["#8b5cf6","#f472b6","#2dd4bf","#fbbf24","#38bdf8",
+                  "#fb7185","#34d399","#a78bfa","#f97316","#ec4899"];
+  let colorIdx = 0;
+  function nextColor() {
+    // Step by a non-1 stride so neighbours never share a colour.
+    colorIdx = (colorIdx + 3) % COLORS.length;
+    return COLORS[colorIdx];
+  }
+
+  const MAX_LETTERS = 60; // keep the DOM light; drop the oldest beyond this
+
+  /* ---------- Sound state (persisted) ---------- */
+  let soundOn = true;
+  try {
+    const saved = localStorage.getItem("hayden-sound");
+    if (saved !== null) soundOn = saved === "on";
+  } catch (e) {}
+  function paintSoundBtn() {
+    soundBtn.textContent = soundOn ? "🔊 Sound on" : "🔇 Sound off";
+    soundBtn.setAttribute("aria-pressed", String(soundOn));
+  }
+  paintSoundBtn();
+
+  soundBtn.addEventListener("click", function () {
+    soundOn = !soundOn;
+    try { localStorage.setItem("hayden-sound", soundOn ? "on" : "off"); } catch (e) {}
+    paintSoundBtn();
+    if (soundOn) { ensureAudio(); playPop(); }   // confirm it works
+    else { stopSpeaking(); }
+    refocus();
+  });
+
+  /* ---------- Web Audio "pop" ---------- */
+  let audioCtx = null;
+  function ensureAudio() {
+    if (!audioCtx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    }
+    if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+  }
+  function playPop() {
+    if (!soundOn || !audioCtx) return;
+    const t = audioCtx.currentTime;
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.connect(g); g.connect(audioCtx.destination);
+    o.type = "sine";
+    o.frequency.setValueAtTime(420, t);
+    o.frequency.exponentialRampToValueAtTime(720, t + 0.08);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.30, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+    o.start(t);
+    o.stop(t + 0.2);
+  }
+
+  /* ---------- Web Speech ---------- */
+  function stopSpeaking() {
+    if ("speechSynthesis" in window) { try { window.speechSynthesis.cancel(); } catch (e) {} }
+  }
+  function speak(text) {
+    if (!soundOn || !text || !("speechSynthesis" in window)) return;
+    try {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = 0.9; u.pitch = 1.2; u.volume = 1;
+      window.speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+
+  /* ---------- Rendering letters ---------- */
+  function addLetterEl(text, isSpace) {
+    const span = document.createElement("span");
+    span.className = "letter" + (isSpace ? " space" : "");
+    span.textContent = isSpace ? "" : text;
+    span.style.color = nextColor();
+    lettersEl.appendChild(span);
+    while (lettersEl.children.length > MAX_LETTERS) {
+      lettersEl.removeChild(lettersEl.firstChild);
+    }
+    stageEl.classList.remove("empty");
+  }
+
+  function handleChar(ch) {
+    const display = ch.toUpperCase();
+    addLetterEl(display, false);
+    ensureAudio(); playPop();
+    speak(display);  // speechSynthesis reads the letter/number aloud
+  }
+  function handleSpecial(kind) {
+    if (kind === "space") {
+      addLetterEl("", true);
+      ensureAudio(); playPop();
+    } else if (kind === "enter") {
+      addLetterEl("✨", false);
+      ensureAudio(); playPop();
+    }
+  }
+
+  function clearLetters() {
+    lettersEl.innerHTML = "";
+    stageEl.classList.add("empty");
+    stopSpeaking();
+    refocus();
+  }
+  document.getElementById("typing-clear").addEventListener("click", clearLetters);
+
+  /* ---------- Input capture ---------- */
+  function isTypingActive() { return body.dataset.view === "typing"; }
+  function refocus() { if (isTypingActive()) capture.focus(); }
+
+  // Physical keyboard: listen on window so it works no matter what is focused.
+  window.addEventListener("keydown", function (e) {
+    if (!isTypingActive()) return;
+    // Let Tab-focused buttons (Home/Clear/Sound) behave normally.
+    if (e.target && e.target.tagName === "BUTTON") return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+    const k = e.key;
+    if (k === "Unidentified") return;          // mobile -> handled by 'input' event
+    if (k === "Escape")    { e.preventDefault(); goHome(); return; }
+    if (k === "Enter")     { e.preventDefault(); handleSpecial("enter"); return; }
+    if (k === " " || k === "Spacebar") { e.preventDefault(); handleSpecial("space"); return; }
+    if (k === "Backspace") { e.preventDefault(); return; }   // graceful: do nothing
+    if (k === "Tab") return;                                  // keep Tab for navigation
+    if (k.length === 1) { e.preventDefault(); handleChar(k); } // printable -> show it
+    // everything else (arrows, Shift, F-keys...) is ignored
+  });
+
+  // On-screen keyboard (tablets): keydown often reports "Unidentified",
+  // so read the typed character from the input itself, then reset it.
+  capture.addEventListener("input", function () {
+    const v = capture.value;
+    capture.value = "";
+    if (!v) return;
+    const ch = v[v.length - 1];
+    if (ch === " ") handleSpecial("space");
+    else if (ch.length === 1) handleChar(ch);
+  });
+
+  // Keep the keyboard up: refocus when the play area is tapped.
+  stageEl.addEventListener("pointerdown", function (e) {
+    if (e.target === capture || e.target === stageEl || e.target === lettersEl) {
+      setTimeout(refocus, 0);
+    }
+  });
+</script>
+</body>
+</html>
