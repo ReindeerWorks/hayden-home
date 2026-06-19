@@ -67,6 +67,8 @@
   body[data-view="typing"]  #typing  { display: flex; }
   body[data-view="drawing"] #drawing { display: flex; }
   body[data-view="gallery"] #gallery { display: flex; }
+  body[data-view="animals"] #animals { display: flex; }
+  body[data-view="card"]    #animal-card { display: flex; }
 
   /* ============================================================
      HOME VIEW
@@ -162,6 +164,7 @@
   .art-animals{ background: linear-gradient(135deg, #34d399 0%, var(--teal) 100%); }
   .art-drawing{ background: linear-gradient(135deg, var(--pink) 0%, var(--yellow) 50%, var(--sky) 100%); }
   .art-gallery{ background: linear-gradient(135deg, #a78bfa 0%, var(--pink) 100%); }
+  .art-animalfriends{ background: linear-gradient(135deg, var(--yellow) 0%, var(--pink) 50%, #34d399 100%); }
 
   .tile-label {
     padding: 16px 18px;
@@ -483,6 +486,80 @@
     background: #fff;
     box-shadow: 0 12px 36px rgba(0,0,0,.45);
   }
+
+  /* ============================================================
+     ANIMAL FRIENDS (grid + card)
+  ============================================================ */
+  #animals, #animal-card {
+    position: fixed;
+    inset: 0;
+    flex-direction: column;
+    background: linear-gradient(160deg, #ede9fe 0%, #fce7f3 100%);
+  }
+  .animals-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+    gap: clamp(12px, 3vw, 22px);
+  }
+  .animal-tile {
+    appearance: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    background: #fff;
+    border-radius: 22px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 0 rgba(139,92,246,.15), 0 12px 24px rgba(109,40,217,.16);
+    transition: transform .1s ease;
+  }
+  .animal-tile:hover, .animal-tile:focus-visible { transform: translateY(-5px); }
+  .animal-tile:active { transform: translateY(0); }
+  .animal-tile-art { width: 100%; aspect-ratio: 1 / 1; overflow: hidden; background: #eee; }
+  .animal-tile-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .animal-tile-label {
+    padding: 12px;
+    font-size: clamp(22px, 4vw, 30px);
+    font-weight: bold;
+    color: var(--purple-deep);
+    text-align: center;
+  }
+
+  /* Animal card */
+  .animal-card-bar { flex-wrap: wrap; }
+  .btn-prev, .btn-next { background: var(--purple); font-size: clamp(24px, 6vw, 34px); }
+  .btn-read { background: #22c55e; margin-left: auto; }
+  .animal-card-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(14px, 3vw, 24px);
+    padding: clamp(14px, 3vw, 30px);
+    text-align: center;
+  }
+  .animal-card-img {
+    max-width: 100%;
+    max-height: 46vh;
+    object-fit: contain;
+    border-radius: 22px;
+    background: #fff;
+    box-shadow: 0 10px 28px rgba(109,40,217,.22);
+  }
+  .animal-card-text {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(10px, 2.5vw, 18px);
+    max-width: min(94vw, 760px);
+  }
+  .ac-name { font-size: clamp(40px, 9vw, 70px); font-weight: bold; color: var(--purple-deep); }
+  .ac-fact, .ac-sound { font-size: clamp(24px, 5vw, 36px); color: var(--ink); margin: 0; line-height: 1.45; }
+  .aw { padding: 1px 5px; border-radius: 9px; transition: background .06s ease; }
+  .aw.speaking { background: var(--yellow); color: var(--ink); }
 </style>
 </head>
 <body data-view="home">
@@ -529,6 +606,11 @@
       <button class="tile" type="button" id="open-gallery">
         <div class="tile-art art-gallery"><span class="tile-emoji" aria-hidden="true">🖼️</span></div>
         <div class="tile-label">My Art</div>
+      </button>
+
+      <button class="tile" type="button" id="open-animals">
+        <div class="tile-art art-animalfriends"><span class="tile-emoji" aria-hidden="true">🦁</span></div>
+        <div class="tile-label">Animal Friends</div>
       </button>
     </div>
 
@@ -596,6 +678,35 @@
     </div>
   </section>
 
+  <!-- ================= ANIMAL FRIENDS — GRID ================= -->
+  <section id="animals" class="view" aria-label="Animal Friends">
+    <div class="typing-bar">
+      <button class="big-btn btn-home" type="button" id="animals-home">🏠 Home</button>
+      <span class="gallery-title">🦁 Animal Friends</span>
+    </div>
+    <div class="gallery-scroll">
+      <div class="animals-grid" id="animals-grid"></div>
+    </div>
+  </section>
+
+  <!-- ================= ANIMAL FRIENDS — CARD ================= -->
+  <section id="animal-card" class="view" aria-label="Animal card">
+    <div class="typing-bar animal-card-bar">
+      <button class="big-btn btn-home" type="button" id="card-home">🏠 Home</button>
+      <button class="big-btn btn-prev" type="button" id="card-prev" aria-label="Previous animal">←</button>
+      <button class="big-btn btn-next" type="button" id="card-next" aria-label="Next animal">→</button>
+      <button class="big-btn btn-read" type="button" id="card-read">🔊 Read again</button>
+    </div>
+    <div class="animal-card-body" id="animal-card-body">
+      <img class="animal-card-img" id="animal-card-img" alt="">
+      <div class="animal-card-text" id="animal-card-text">
+        <div class="ac-name" id="ac-name"></div>
+        <p class="ac-fact" id="ac-fact"></p>
+        <p class="ac-sound" id="ac-sound"></p>
+      </div>
+    </div>
+  </section>
+
 <script>
   /* ============================================================
      CONFIG — set these when the photo albums are ready.
@@ -604,6 +715,26 @@
   ============================================================ */
   const FAMILY_ALBUM_URL  = "https://photos.app.goo.gl/zJUL2hJeXW8rws6U9";
   const ANIMALS_ALBUM_URL = "https://photos.app.goo.gl/oYSywhirrwUxMJ4H8";
+
+  /* ============================================================
+     ANIMAL FRIENDS DATA
+     To add an animal: drop a photo in animals/ and add one entry
+     with { name, img, fact, sound }. Order here is the card order.
+  ============================================================ */
+  const ANIMALS = [
+    { name: "Cat",      img: "cat.jpg",      fact: "Cats have soft fur and love to nap.",                 sound: "A cat says: meow." },
+    { name: "Dog",      img: "dog.jpg",      fact: "Dogs are friendly and love to play fetch.",           sound: "A dog says: woof." },
+    { name: "Rabbit",   img: "rabbit.jpg",   fact: "Rabbits hop on big back legs and love to munch carrots.", sound: "A rabbit thumps its feet: thump, thump!" },
+    { name: "Panda",    img: "panda.jpg",    fact: "Pandas munch bamboo all day long.",                   sound: "A panda makes a soft bleat." },
+    { name: "Koala",    img: "koala.jpg",    fact: "Koalas live in trees and sleep a lot.",               sound: "A koala makes a deep grunt." },
+    { name: "Penguin",  img: "penguin.jpg",  fact: "Penguins waddle when they walk and love to swim.",    sound: "A penguin makes a honk." },
+    { name: "Elephant", img: "elephant.jpg", fact: "Elephants are big and have a long trunk.",            sound: "An elephant trumpets with its trunk." },
+    { name: "Lion",     img: "lion.jpg",     fact: "A lion is a big, strong cat.",                        sound: "A lion says: roar!" },
+    { name: "Fox",      img: "fox.jpg",      fact: "A fox has a bushy tail and pointy ears.",             sound: "A fox says: yip!" },
+    { name: "Owl",      img: "owl.jpg",      fact: "Owls have big eyes and can fly at night.",            sound: "An owl says: hoot, hoot." },
+    { name: "Dolphin",  img: "dolphin.jpg",  fact: "Dolphins are smart and love to jump and swim.",       sound: "A dolphin makes clicks and whistles." },
+    { name: "Giraffe",  img: "giraffe.jpg",  fact: "A giraffe has a very long neck to reach tall leaves.", sound: "A giraffe hums very softly." }
+  ];
 
   /* ---------- View navigation ---------- */
   const body = document.body;
@@ -1130,6 +1261,115 @@
   document.getElementById("viewer-back").addEventListener("click", closeViewer);
   document.getElementById("viewer-home").addEventListener("click", function () { closeViewer(); goHome(); });
   document.getElementById("gallery-empty-draw").addEventListener("click", goDrawing);
+
+  /* ============================================================
+     ANIMAL FRIENDS — grid, card, read-aloud with word highlight
+  ============================================================ */
+  const cardTextEl = document.getElementById("animal-card-text");
+  let currentAnimal = 0;
+  let animalSeq = 0;   // bumped to invalidate any in-flight read-aloud
+
+  function clearHighlights() {
+    cardTextEl.querySelectorAll(".aw.speaking").forEach(function (s) { s.classList.remove("speaking"); });
+  }
+  function stopAnimalRead() {
+    animalSeq++;
+    stopSpeaking();
+    clearHighlights();
+  }
+
+  /* Build the grid once */
+  function renderAnimalsGrid() {
+    const grid = document.getElementById("animals-grid");
+    if (grid.dataset.built) return;
+    ANIMALS.forEach(function (a, idx) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "animal-tile";
+      b.setAttribute("aria-label", a.name);
+      const art = document.createElement("div");
+      art.className = "animal-tile-art";
+      const img = document.createElement("img");
+      img.src = "animals/" + a.img; img.alt = a.name; img.loading = "lazy";
+      art.appendChild(img);
+      const label = document.createElement("div");
+      label.className = "animal-tile-label";
+      label.textContent = a.name;
+      b.appendChild(art); b.appendChild(label);
+      b.addEventListener("click", function () { goAnimalCard(idx); });
+      grid.appendChild(b);
+    });
+    grid.dataset.built = "1";
+  }
+
+  /* Split text into <span class="aw"> word spans (display keeps punctuation) */
+  function fillCardWords(el, text) {
+    el.innerHTML = "";
+    text.split(/\s+/).forEach(function (w, i) {
+      if (i) el.appendChild(document.createTextNode(" "));
+      const s = document.createElement("span");
+      s.className = "aw";
+      s.textContent = w;
+      el.appendChild(s);
+    });
+  }
+
+  /* Read the card aloud ONE WORD AT A TIME, highlighting each as it is spoken.
+     Advances on utterance.onend (not onboundary, which is unreliable on mobile),
+     with a safety timeout so it can never get stuck. Reuses the typing voice. */
+  function readCard() {
+    stopSpeaking();
+    animalSeq++;
+    const myId = animalSeq;
+    clearHighlights();
+    if (!soundOn || !("speechSynthesis" in window)) return;   // respect global mute
+    const tokens = Array.prototype.slice.call(cardTextEl.querySelectorAll(".aw"));
+    let i = 0;
+    function step() {
+      if (myId !== animalSeq) return;            // a newer read (or navigation) superseded us
+      clearHighlights();
+      if (i >= tokens.length) return;            // done
+      const el = tokens[i];
+      el.classList.add("speaking");
+      const word = (el.textContent || "").replace(/[^A-Za-z0-9']/g, " ").trim();
+      function advance() { if (myId !== animalSeq) return; i++; step(); }
+      if (!word) { setTimeout(advance, 140); return; }   // punctuation-only token
+      try {
+        const u = new SpeechSynthesisUtterance(word);
+        u.rate = 0.9; u.pitch = 1.2; u.volume = 1;        // same voice as the typing box
+        let done = false;
+        const go = function () { if (done) return; done = true; clearTimeout(safety); advance(); };
+        const safety = setTimeout(go, 1900);              // never get stuck if onend misfires
+        u.onend = go;
+        u.onerror = go;
+        window.speechSynthesis.speak(u);
+      } catch (e) { setTimeout(advance, 140); }
+    }
+    step();
+  }
+
+  function goAnimalCard(idx) {
+    stopAnimalRead();
+    currentAnimal = (idx % ANIMALS.length + ANIMALS.length) % ANIMALS.length;   // loop
+    const a = ANIMALS[currentAnimal];
+    const img = document.getElementById("animal-card-img");
+    img.src = "animals/" + a.img; img.alt = a.name;
+    fillCardWords(document.getElementById("ac-name"), a.name);
+    fillCardWords(document.getElementById("ac-fact"), a.fact);
+    fillCardWords(document.getElementById("ac-sound"), a.sound);
+    document.getElementById("animal-card-body").scrollTop = 0;
+    body.dataset.view = "card";
+    setTimeout(readCard, 350);   // auto-read after layout settles
+  }
+
+  function goAnimals() { stopAnimalRead(); renderAnimalsGrid(); body.dataset.view = "animals"; }
+
+  document.getElementById("open-animals").addEventListener("click", goAnimals);
+  document.getElementById("animals-home").addEventListener("click", function () { stopAnimalRead(); goHome(); });
+  document.getElementById("card-home").addEventListener("click", function () { stopAnimalRead(); goHome(); });
+  document.getElementById("card-prev").addEventListener("click", function () { goAnimalCard(currentAnimal - 1); });
+  document.getElementById("card-next").addEventListener("click", function () { goAnimalCard(currentAnimal + 1); });
+  document.getElementById("card-read").addEventListener("click", readCard);
 
   /* ---------- PWA: register the service worker ---------- */
   if ("serviceWorker" in navigator) {

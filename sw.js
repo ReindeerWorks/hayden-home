@@ -1,6 +1,6 @@
 /* Hayden's Home — minimal service worker.
    Caches the landing-page shell so it opens offline. Bump CACHE on changes. */
-const CACHE = "hayden-home-v3";
+const CACHE = "hayden-home-v4";
 
 // Same-origin shell assets the launcher needs to render.
 const SHELL = [
