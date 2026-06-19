@@ -66,6 +66,7 @@
   body[data-view="home"]    #home    { display: block; }
   body[data-view="typing"]  #typing  { display: flex; }
   body[data-view="drawing"] #drawing { display: flex; }
+  body[data-view="gallery"] #gallery { display: flex; }
 
   /* ============================================================
      HOME VIEW
@@ -160,6 +161,7 @@
   .art-family { background: linear-gradient(135deg, var(--yellow) 0%, var(--pink) 100%); }
   .art-animals{ background: linear-gradient(135deg, #34d399 0%, var(--teal) 100%); }
   .art-drawing{ background: linear-gradient(135deg, var(--pink) 0%, var(--yellow) 50%, var(--sky) 100%); }
+  .art-gallery{ background: linear-gradient(135deg, #a78bfa 0%, var(--pink) 100%); }
 
   .tile-label {
     padding: 16px 18px;
@@ -232,6 +234,7 @@
   .btn-sound { background: var(--teal); margin-left: auto; }
   .btn-save  { background: #22c55e; }
   .btn-undo  { background: var(--sky); }
+  .btn-gallery { background: #a78bfa; }
 
   /* Stage where the giant letters appear */
   .stage {
@@ -390,6 +393,96 @@
     touch-action: none;
     cursor: crosshair;
   }
+
+  /* ============================================================
+     GALLERY VIEW (saved drawings)
+  ============================================================ */
+  #gallery {
+    position: fixed;
+    inset: 0;
+    flex-direction: column;
+    background: linear-gradient(160deg, #ede9fe 0%, #fce7f3 100%);
+  }
+  .gallery-title {
+    font-size: clamp(22px, 5vw, 32px);
+    font-weight: bold;
+    color: var(--purple-deep);
+    margin-left: 6px;
+  }
+  .gallery-scroll {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: clamp(12px, 3vw, 24px);
+  }
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+    gap: clamp(12px, 3vw, 20px);
+  }
+  .art-tile {
+    appearance: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    background: #fff;
+    border-radius: 20px;
+    overflow: hidden;
+    aspect-ratio: 1 / 1;
+    box-shadow: 0 8px 0 rgba(139,92,246,.15), 0 12px 24px rgba(109,40,217,.16);
+    transition: transform .1s ease;
+  }
+  .art-tile:hover, .art-tile:focus-visible { transform: translateY(-4px); }
+  .art-tile:active { transform: translateY(0); }
+  .art-tile img { width: 100%; height: 100%; object-fit: contain; background: #fff; display: block; }
+
+  .gallery-empty {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 16px;
+    color: var(--purple-deep);
+    padding: 30px;
+  }
+  .gallery-empty[hidden] { display: none; }   /* override .gallery-empty's display:flex */
+  .gallery-empty .big-emoji { font-size: clamp(60px, 18vw, 120px); line-height: 1; }
+  .gallery-empty p { font-size: clamp(20px, 5vw, 30px); margin: 0; }
+
+  /* Full-screen single-drawing viewer (overlay inside the gallery) */
+  .art-viewer {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    display: none;
+    flex-direction: column;
+    background: rgba(45, 27, 61, .94);
+  }
+  #gallery.viewing .art-viewer { display: flex; }
+  .art-viewer-bar {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 12px;
+    padding: 14px clamp(12px, 3vw, 24px);
+  }
+  .art-viewer-img {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 14px clamp(12px, 3vw, 24px) clamp(16px, 4vw, 30px);
+    overflow: hidden;
+  }
+  .art-viewer-img img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 12px 36px rgba(0,0,0,.45);
+  }
 </style>
 </head>
 <body data-view="home">
@@ -432,6 +525,11 @@
         <div class="tile-art art-drawing"><span class="tile-emoji" aria-hidden="true">🎨</span></div>
         <div class="tile-label">Drawing Pad</div>
       </button>
+
+      <button class="tile" type="button" id="open-gallery">
+        <div class="tile-art art-gallery"><span class="tile-emoji" aria-hidden="true">🖼️</span></div>
+        <div class="tile-label">My Art</div>
+      </button>
     </div>
 
     <h2 class="section-title">📸 Photos</h2>
@@ -463,6 +561,7 @@
       <button class="big-btn btn-undo"  type="button" id="draw-undo">↩️ Undo</button>
       <button class="big-btn btn-clear" type="button" id="draw-clear">🧹 Clear</button>
       <button class="big-btn btn-save"  type="button" id="draw-save">💾 Save</button>
+      <button class="big-btn btn-gallery" type="button" id="draw-gallery">🖼️ Art</button>
     </div>
     <div class="tools-bar">
       <div class="swatches" id="swatches" role="group" aria-label="Colors"></div>
@@ -471,6 +570,29 @@
     </div>
     <div class="draw-stage" id="draw-stage">
       <canvas id="pad" aria-label="Drawing canvas"></canvas>
+    </div>
+  </section>
+
+  <!-- ================= GALLERY ================= -->
+  <section id="gallery" class="view" aria-label="My Art gallery">
+    <div class="typing-bar">
+      <button class="big-btn btn-home" type="button" id="gallery-home">🏠 Home</button>
+      <span class="gallery-title">🖼️ My Art</span>
+    </div>
+    <div class="gallery-scroll" id="gallery-scroll">
+      <div class="gallery-grid" id="gallery-grid"></div>
+      <div class="gallery-empty" id="gallery-empty" hidden>
+        <div class="big-emoji" aria-hidden="true">🎨</div>
+        <p>No drawings yet!<br>Tap Drawing Pad to make one.</p>
+        <button class="big-btn btn-home" type="button" id="gallery-empty-draw">🎨 Go Draw</button>
+      </div>
+    </div>
+    <div class="art-viewer" id="art-viewer">
+      <div class="art-viewer-bar">
+        <button class="big-btn btn-home" type="button" id="viewer-back">⬅️ Back</button>
+        <button class="big-btn btn-save" type="button" id="viewer-home">🏠 Home</button>
+      </div>
+      <div class="art-viewer-img"><img id="art-viewer-img" alt="Drawing"></div>
     </div>
   </section>
 
@@ -886,12 +1008,19 @@
     const stamp = d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) +
       "_" + p(d.getHours()) + "-" + p(d.getMinutes()) + "-" + p(d.getSeconds()) +
       "-" + p(d.getMilliseconds(), 3);   // ms suffix guarantees uniqueness within a second
+    const filename = "hayden-drawing-" + stamp + ".png";
     const a = document.createElement("a");
     a.href = url;
-    a.download = "hayden-drawing-" + stamp + ".png";
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     a.remove();
+    // Also store the drawing in the in-app gallery (download behaviour unchanged).
+    if (pad.toBlob) {
+      pad.toBlob(function (blob) {
+        if (blob) artAdd(blob, filename, d.getTime()).catch(function () {});
+      }, "image/png");
+    }
   }
 
   /* ---------- View wiring ---------- */
@@ -910,6 +1039,97 @@
   window.addEventListener("resize", function () {
     if (body.dataset.view === "drawing") sizeCanvas();
   });
+
+  /* ============================================================
+     GALLERY — saved drawings stored in IndexedDB
+  ============================================================ */
+  const ART_DB = "hayden-art", ART_STORE = "drawings";
+  function artOpen() {
+    return new Promise(function (resolve, reject) {
+      let req;
+      try { req = indexedDB.open(ART_DB, 1); } catch (e) { reject(e); return; }
+      req.onupgradeneeded = function () {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(ART_STORE)) {
+          db.createObjectStore(ART_STORE, { keyPath: "id", autoIncrement: true });
+        }
+      };
+      req.onsuccess = function () { resolve(req.result); };
+      req.onerror = function () { reject(req.error); };
+    });
+  }
+  function artAdd(blob, name, ts) {
+    return artOpen().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        const tx = db.transaction(ART_STORE, "readwrite");
+        tx.objectStore(ART_STORE).add({ blob: blob, name: name, ts: ts });
+        tx.oncomplete = function () { db.close(); resolve(); };
+        tx.onerror = function () { db.close(); reject(tx.error); };
+      });
+    });
+  }
+  function artGetAll() {
+    return artOpen().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        const tx = db.transaction(ART_STORE, "readonly");
+        const r = tx.objectStore(ART_STORE).getAll();
+        r.onsuccess = function () { db.close(); resolve(r.result || []); };
+        r.onerror = function () { db.close(); reject(r.error); };
+      });
+    });
+  }
+
+  const galleryEl = document.getElementById("gallery");
+  let galleryURLs = [];
+  function clearGalleryURLs() {
+    galleryURLs.forEach(function (u) { URL.revokeObjectURL(u); });
+    galleryURLs = [];
+  }
+  function renderGallery() {
+    const grid  = document.getElementById("gallery-grid");
+    const empty = document.getElementById("gallery-empty");
+    clearGalleryURLs();
+    grid.innerHTML = "";
+    artGetAll().then(function (items) {
+      items.sort(function (a, b) { return (b.ts || 0) - (a.ts || 0); });  // newest first
+      if (!items.length) { empty.hidden = false; grid.style.display = "none"; return; }
+      empty.hidden = true; grid.style.display = "";
+      items.forEach(function (it) {
+        const objUrl = URL.createObjectURL(it.blob);
+        galleryURLs.push(objUrl);
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "art-tile";
+        b.setAttribute("aria-label", "View drawing");
+        const img = document.createElement("img");
+        img.src = objUrl; img.alt = "Drawing";
+        b.appendChild(img);
+        b.addEventListener("click", function () { openViewer(objUrl); });
+        grid.appendChild(b);
+      });
+    }).catch(function () { empty.hidden = false; grid.style.display = "none"; });
+  }
+
+  function openViewer(objUrl) {
+    document.getElementById("art-viewer-img").src = objUrl;
+    galleryEl.classList.add("viewing");
+  }
+  function closeViewer() {
+    galleryEl.classList.remove("viewing");
+    document.getElementById("art-viewer-img").src = "";
+  }
+
+  function goGallery() {
+    body.dataset.view = "gallery";
+    closeViewer();
+    renderGallery();
+  }
+  document.getElementById("open-gallery").addEventListener("click", goGallery);
+  document.getElementById("draw-gallery").addEventListener("click", goGallery);
+  document.getElementById("gallery-home").addEventListener("click", function () { closeViewer(); goHome(); });
+  document.getElementById("viewer-back").addEventListener("click", closeViewer);
+  document.getElementById("viewer-home").addEventListener("click", function () { closeViewer(); goHome(); });
+  document.getElementById("gallery-empty-draw").addEventListener("click", goDrawing);
 
   /* ---------- PWA: register the service worker ---------- */
   if ("serviceWorker" in navigator) {
