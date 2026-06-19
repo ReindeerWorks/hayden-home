@@ -610,7 +610,7 @@
 
       <button class="tile" type="button" id="open-animals">
         <div class="tile-art art-animalfriends"><span class="tile-emoji" aria-hidden="true">🦁</span></div>
-        <div class="tile-label">Animal Friends</div>
+        <div class="tile-label">Learn about Animals</div>
       </button>
     </div>
 
@@ -679,10 +679,10 @@
   </section>
 
   <!-- ================= ANIMAL FRIENDS — GRID ================= -->
-  <section id="animals" class="view" aria-label="Animal Friends">
+  <section id="animals" class="view" aria-label="Learn about Animals">
     <div class="typing-bar">
       <button class="big-btn btn-home" type="button" id="animals-home">🏠 Home</button>
-      <span class="gallery-title">🦁 Animal Friends</span>
+      <span class="gallery-title">🦁 Learn about Animals</span>
     </div>
     <div class="gallery-scroll">
       <div class="animals-grid" id="animals-grid"></div>
@@ -722,18 +722,18 @@
      with { name, img, fact, sound }. Order here is the card order.
   ============================================================ */
   const ANIMALS = [
-    { name: "Cat",      img: "cat.jpg",      fact: "Cats have soft fur and love to nap.",                 sound: "A cat says: meow." },
-    { name: "Dog",      img: "dog.jpg",      fact: "Dogs are friendly and love to play fetch.",           sound: "A dog says: woof." },
-    { name: "Rabbit",   img: "rabbit.jpg",   fact: "Rabbits hop on big back legs and love to munch carrots.", sound: "A rabbit thumps its feet: thump, thump!" },
-    { name: "Panda",    img: "panda.jpg",    fact: "Pandas munch bamboo all day long.",                   sound: "A panda makes a soft bleat." },
-    { name: "Koala",    img: "koala.jpg",    fact: "Koalas live in trees and sleep a lot.",               sound: "A koala makes a deep grunt." },
-    { name: "Penguin",  img: "penguin.jpg",  fact: "Penguins waddle when they walk and love to swim.",    sound: "A penguin makes a honk." },
-    { name: "Elephant", img: "elephant.jpg", fact: "Elephants are big and have a long trunk.",            sound: "An elephant trumpets with its trunk." },
-    { name: "Lion",     img: "lion.jpg",     fact: "A lion is a big, strong cat.",                        sound: "A lion says: roar!" },
-    { name: "Fox",      img: "fox.jpg",      fact: "A fox has a bushy tail and pointy ears.",             sound: "A fox says: yip!" },
-    { name: "Owl",      img: "owl.jpg",      fact: "Owls have big eyes and can fly at night.",            sound: "An owl says: hoot, hoot." },
-    { name: "Dolphin",  img: "dolphin.jpg",  fact: "Dolphins are smart and love to jump and swim.",       sound: "A dolphin makes clicks and whistles." },
-    { name: "Giraffe",  img: "giraffe.jpg",  fact: "A giraffe has a very long neck to reach tall leaves.", sound: "A giraffe hums very softly." }
+    { name: "Cat",      img: "cat.jpg",      facts: ["Cats eat meat and special cat food.", "Soft paws hide sharp claws for climbing.", "Cats love to nap in the sun."],                sound: "A cat says: meow." },
+    { name: "Dog",      img: "dog.jpg",      facts: ["Dogs eat meat and crunchy dog food.", "A dog's nose can smell far better than ours.", "Dogs love to run and wag their tails."], sound: "A dog says: woof." },
+    { name: "Rabbit",   img: "rabbit.jpg",   facts: ["Rabbits eat grass, hay, and carrots.", "Long ears help a rabbit hear everything.", "Rabbits hop fast on big back feet."],        sound: "A rabbit thumps its feet: thump, thump!" },
+    { name: "Panda",    img: "panda.jpg",    facts: ["Pandas eat lots and lots of bamboo.", "A panda is a kind of bear.", "Pandas live far away in China."],                          sound: "A panda makes a soft bleat." },
+    { name: "Koala",    img: "koala.jpg",    facts: ["Koalas eat leaves from gum trees.", "Koalas sleep almost all day long.", "They live up high in the trees."],                     sound: "A koala makes a deep grunt." },
+    { name: "Penguin",  img: "penguin.jpg",  facts: ["Penguins eat fish from the sea.", "Penguins can't fly, but they swim fast.", "Many penguins live where it's cold and snowy."],    sound: "A penguin makes a honk." },
+    { name: "Elephant", img: "elephant.jpg", facts: ["Elephants eat grass, leaves, and fruit.", "An elephant uses its trunk like a hand.", "Elephants are the biggest animals on land."], sound: "An elephant trumpets with its trunk." },
+    { name: "Lion",     img: "lion.jpg",     facts: ["Lions eat meat that they hunt.", "A lion has a big, loud roar.", "Lions live on warm, grassy land in Africa."],                  sound: "A lion says: roar!" },
+    { name: "Fox",      img: "fox.jpg",      facts: ["Foxes eat small animals and berries.", "A fox has a big, bushy tail.", "Foxes are clever and live in the forest."],              sound: "A fox says: yip!" },
+    { name: "Owl",      img: "owl.jpg",      facts: ["Owls eat mice and bugs.", "Owls stay awake at night.", "An owl can turn its head way around."],                                 sound: "An owl says: hoot, hoot." },
+    { name: "Dolphin",  img: "dolphin.jpg",  facts: ["Dolphins eat lots of fish.", "Dolphins live and swim in the ocean.", "Dolphins are very smart and playful."],                   sound: "A dolphin makes clicks and whistles." },
+    { name: "Giraffe",  img: "giraffe.jpg",  facts: ["Giraffes eat leaves from tall trees.", "A giraffe is the tallest animal of all.", "Its long neck reaches the highest leaves."], sound: "A giraffe hums very softly." }
   ];
 
   /* ---------- View navigation ---------- */
@@ -1331,6 +1331,7 @@
       if (i >= tokens.length) return;            // done
       const el = tokens[i];
       el.classList.add("speaking");
+      try { el.scrollIntoView({ block: "center", behavior: "smooth" }); } catch (e) {}   // keep highlight in view as longer text reads
       const word = (el.textContent || "").replace(/[^A-Za-z0-9']/g, " ").trim();
       function advance() { if (myId !== animalSeq) return; i++; step(); }
       if (!word) { setTimeout(advance, 140); return; }   // punctuation-only token
@@ -1355,7 +1356,7 @@
     const img = document.getElementById("animal-card-img");
     img.src = "animals/" + a.img; img.alt = a.name;
     fillCardWords(document.getElementById("ac-name"), a.name);
-    fillCardWords(document.getElementById("ac-fact"), a.fact);
+    fillCardWords(document.getElementById("ac-fact"), a.facts.join(" "));
     fillCardWords(document.getElementById("ac-sound"), a.sound);
     document.getElementById("animal-card-body").scrollTop = 0;
     body.dataset.view = "card";
