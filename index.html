@@ -273,17 +273,17 @@
     flex-wrap: wrap;
     align-content: center;
     justify-content: center;
-    gap: 4px 12px;
+    gap: 4px 8px;
     width: 100%;
     pointer-events: none;
   }
   .letter {
-    font-size: clamp(70px, 18vw, 200px);
+    font-size: clamp(44px, 9vw, 110px);
     font-weight: bold;
     line-height: 1;
     animation: pop-in .35s cubic-bezier(.18,1.4,.4,1);
   }
-  .letter.space { width: clamp(36px, 9vw, 90px); }
+  .letter.space { width: clamp(22px, 4.5vw, 50px); }
   @keyframes pop-in {
     0%   { transform: scale(.1) rotate(-12deg); opacity: 0; }
     60%  { transform: scale(1.25) rotate(6deg); opacity: 1; }
